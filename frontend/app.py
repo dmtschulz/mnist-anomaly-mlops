@@ -7,7 +7,7 @@ import os
 
 # Read API address from variable or default (if without Docker).
 API_HOST = os.environ.get("API_HOST", "127.0.0.1")
-API_PORT = os.environ.get("API_PORT", "8000") # Default port for local launch
+API_PORT = os.environ.get("API_PORT", "8000")  # Default port for local launch
 
 # Generate full URL
 API_URL = f"http://{API_HOST}:{API_PORT}/predict"
