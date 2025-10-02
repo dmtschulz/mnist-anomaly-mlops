@@ -8,7 +8,9 @@ WORKDIR /app
 
 # Устанавливаем зависимости
 COPY requirements-train.txt .
-RUN pip install --no-cache-dir -r requirements-train.txt
+RUN pip install --no-cache-dir \
+    -r requirements-train.txt \
+    --extra-index-url https://download.pytorch.org/whl/cpu
 
 # Копируем код скрипта тренировки
 COPY src/ ./src/
