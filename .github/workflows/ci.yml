@@ -103,7 +103,7 @@ jobs:
           # Загружаем на Hugging Face
           python src/publish_model.py
         env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }} 
+          HF_TOKEN: ${{ secrets.HF_TOKEN_WRITE }} 
           NEW_TAG: ${{ steps.versioning.outputs.NEW_TAG }} 
           REPO_ID: 'dmtschulz/anomaly-detection-model'
 

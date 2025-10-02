@@ -146,7 +146,7 @@ def evaluate_model(model: nn.Module, loader: DataLoader, loss_fn: nn.Module) -> 
 # Main for getting data and testing the model
 if __name__ == "__main__":
     train_loader, test_loader = get_data_loaders()
-    model = train(train_loader, h=32, epochs=5, save_path=f"{MODEL_DIR}/autoencoder_mnist.pth")
+    model = train(train_loader, h=32, epochs=1, save_path=f"{MODEL_DIR}/autoencoder_mnist.pth")
 
     # --- NEW: compute and persist final test loss ---
     test_loss = evaluate_model(model, test_loader, loss_fn)
