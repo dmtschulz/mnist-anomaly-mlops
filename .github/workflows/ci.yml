@@ -128,7 +128,7 @@ jobs:
             echo "Model wasn't better (new Loss: ${{ env.NEW_LOSS }} vs. Best: ${{ env.BEST_LOSS }}). Skip publishing."
 
   # 4. CONTINUES DEPLOYMENT (Build and Publish Docker)
-  build_and_push_docker:
+  build_push_docker:
     runs-on: ubuntu-latest
     if: always()
     
@@ -163,7 +163,7 @@ jobs:
             type=sha,format=short # Short SHA-hash commits
 
       - name: Build and Push Docker Image
-        uses: docker/build-and-push-action@v5
+        uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile.backend 
