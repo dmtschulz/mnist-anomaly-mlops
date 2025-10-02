@@ -109,7 +109,7 @@ def train(loader,
     epochs: int = 1,
     model_key: str = "models/model.pth",
     metrics_key: str = "metrics/metrics.json"
-):
+    ):
 
     model = Autoencoder(h).to(DEVICE)
     optimizer = optim.Adam(model.parameters(), lr=0.001)
