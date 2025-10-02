@@ -41,6 +41,9 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: 'pip'                       # <-- включаем кеш
+          cache-dependency-path: |           # <-- файлы, влияющие на ключ кеша
+                 requirements-backend.txt
 
       - name: Install Backend Dependencies
         # Use backend file dependencies for tests
@@ -71,6 +74,9 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: 'pip'
+          cache-dependency-path: |
+                 requirements-backend.txt
 
       - name: Install Training Dependencies
         run: |

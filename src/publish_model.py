@@ -9,6 +9,7 @@ HF_TOKEN = os.environ.get('HF_TOKEN_WRITE')
 NEW_TAG = os.environ.get('NEW_TAG')
 REPO_ID = os.environ.get('REPO_ID')
 
+TARGET_REVISION = 'candidate'
 MODEL_PATH = 'models/autoencoder_mnist.pth' 
 
 if __name__ == "__main__":
@@ -26,11 +27,14 @@ if __name__ == "__main__":
             path_in_repo=os.path.basename(MODEL_PATH),
             repo_id=REPO_ID,
             repo_type='model',
-            revision=NEW_TAG, # Используем тег в качестве ветки/ревизии
-            commit_message=f'Model {NEW_TAG} trained via GitHub Actions'
+            revision=TARGET_REVISION,
+            create_pr=False,
+            commit_message=f'Model {NEW_TAG} trained via GitHub Actions',
+            create_tag=NEW_TAG
         )
-        print("✅ Публикация на Hugging Face завершена.")
-        print("ВАЖНО: Обновите BEST_MODEL_LOSS вручную в настройках GitHub, чтобы 'закрыть' гейт.")
+        print(f"✅ Публикация в ветку '{TARGET_REVISION}' завершена.")
+        print(f"ВАЖНО: Теперь вам нужно вручную создать Pull Request на Hugging Face, чтобы слить '{TARGET_REVISION}' в 'main'.")
+        
     except Exception as e:
         print(f"❌ Ошибка при публикации: {e}")
         # Это заставит job упасть, если публикация не удалась
