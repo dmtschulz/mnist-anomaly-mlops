@@ -55,3 +55,78 @@ jobs:
         run: |
           echo "Running fast unit tests..."
           # pytest # <--- Run this when we will have tests
+
+  # 3. НЕПРЕРЫВНАЯ ДОСТАВКА (Обучение и Публикация)
+  train_and_publish:
+    runs-on: ubuntu-latest
+    needs: [unit_test] 
+
+    environment: production 
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Training Dependencies
+        # ВАЖНО: убедитесь, что 'huggingface_hub' добавлен в requirements-backend.txt
+        run: |
+          pip install -r requirements-backend.txt
+
+      - name: Run Model Training
+        # Запускаем ваш скрипт тренировки. Он сохранит model.pth и metrics.txt
+        run: python src/train.py
+
+      - name: Determine new Model Tag (for versioning)
+        id: versioning
+        run: echo "NEW_TAG=v$(date +'%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT 
+        # Output: versioning.outputs.NEW_TAG будет содержать тег
+
+      - name: Save Training Metric (Read Loss)
+        id: read_metric
+        # Считываем метрику из файла metrics.txt
+        run: |
+          LOSS_VALUE=$(grep "test_loss" metrics.txt | cut -d '=' -f2)
+          echo "NEW_LOSS=$LOSS_VALUE" >> $GITHUB_ENV # Сохраняем в переменную среды (env.NEW_LOSS)
+          echo "New Loss: $LOSS_VALUE"
+          # --- ШАГ ГЕЙТИНГА: СРАВНЕНИЕ И ПУБЛИКАЦИЯ ---
+      - name: Compare and Publish Model (Conditional Step)
+        # Условие: публиковать, только если новый Loss меньше лучшего (secrets.BEST_MODEL_LOSS)
+        if: success() && env.NEW_LOSS < secrets.BEST_MODEL_LOSS 
+        run: |
+          echo "Новая модель лучше! Публикуем с тегом ${{ steps.versioning.outputs.NEW_TAG }}..."
+          
+          # Загружаем на Hugging Face (ВЕСЬ КОД СКРИПТА В ОДНОМ БЛОКЕ)
+          python -c "
+            import os
+            from huggingface_hub import HfApi
+
+            REPO_ID = 'dmtschulz/anomaly-detection-model' 
+            FILE_PATH = 'models/autoencoder_mnist.pth' 
+            # NEW_TAG читается здесь из env
+            NEW_TAG = os.environ.get('NEW_TAG') 
+
+            api = HfApi(token='${{ secrets.HF_TOKEN_WRITE }}') 
+            api.upload_file(
+                path_or_fileobj=FILE_PATH,
+                path_in_repo=os.path.basename(FILE_PATH),
+                repo_id=REPO_ID,
+                repo_type='model',
+                revision='${{ steps.versioning.outputs.NEW_TAG }}',
+                commit_message=f'Model {NEW_TAG} trained via GitHub Actions'
+            )
+
+            print('Новая модель опубликована. Обновите BEST_MODEL_LOSS вручную в настройках GitHub.')
+            " # <-- Тут закрывающая кавычка и нет разрыва строки!
+        env:
+          HF_TOKEN_WRITE: ${{ secrets.HF_TOKEN_WRITE }} 
+          NEW_TAG: ${{ steps.versioning.outputs.NEW_TAG }} 
+
+      - name: Skip Publishing
+        if: success() && env.NEW_LOSS >= secrets.BEST_MODEL_LOSS
+        run: |
+            echo "Модель не улучшилась (новый Loss: ${{ env.NEW_LOSS }} vs. Best: ${{ secrets.BEST_MODEL_LOSS }}). Пропускаем публикацию."

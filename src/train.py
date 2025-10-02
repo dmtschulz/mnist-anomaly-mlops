@@ -126,7 +126,32 @@ def predict_anomaly_score(model, x):
     return score.cpu().numpy()
 
 
+# --- NEW: evaluation ---
+def evaluate_model(model: nn.Module, loader: DataLoader, loss_fn: nn.Module) -> float:
+    """Return mean loss over all samples in the loader."""
+    model.eval()
+    total_loss = 0.0
+    n_samples = 0
+    with torch.no_grad():
+        for batch, _ in loader:
+            batch = batch.to(DEVICE)
+            recon = model(batch)
+            loss = loss_fn(recon, batch)          # mean over the batch
+            bs = batch.size(0)
+            total_loss += loss.item() * bs        # weight by batch size
+            n_samples += bs
+    return total_loss / max(n_samples, 1)
+
+
 # Main for getting data and testing the model
 if __name__ == "__main__":
     train_loader, test_loader = get_data_loaders()
     model = train(train_loader, h=32, epochs=5, save_path=f"{MODEL_DIR}/autoencoder_mnist.pth")
+
+    # --- NEW: compute and persist final test loss ---
+    test_loss = evaluate_model(model, test_loader, loss_fn)
+    log.info(f"Final Test Loss: {test_loss:.6f}")
+
+    # Save metric for GitHub Actions
+    with open("metrics.txt", "w") as f:
+        f.write(f"test_loss={test_loss}\n")
