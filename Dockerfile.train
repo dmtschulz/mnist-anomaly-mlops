@@ -1,0 +1,20 @@
+# Dockerfile.train
+
+# Используем базовый образ с Python
+FROM python:3.11-slim
+
+# Устанавливаем рабочую директорию
+WORKDIR /app
+
+# Устанавливаем зависимости
+COPY requirements-train.txt .
+RUN pip install --no-cache-dir -r requirements-train.txt
+
+# Копируем код скрипта тренировки
+COPY src/ ./src/
+
+# Точка входа: Запускаем скрипт train.py с аргументами командной строки
+# Скрипт train.py должен уметь принимать аргументы, такие как имя S3-корзины
+ENTRYPOINT ["python", "src/train.py"] 
+# Мы не используем CMD, так как аргументы (например, имя корзины S3) 
+# будут переданы через команду docker run.

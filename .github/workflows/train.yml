@@ -1,0 +1,68 @@
+# .github/workflows/train.yml
+
+name: MLOps Training Pipeline
+
+on:
+  # Запуск вручную для контроля, или по расписанию (schedule)
+  workflow_dispatch:
+    inputs:
+      s3_bucket:
+        description: 'S3 bucket for data/artifacts'
+        required: true
+        default: 'anomaly-mlops-mnist-data'
+
+jobs:
+  # 1. BUILD AND PUBLISH TRAINER IMAGE
+  build_and_push_trainer:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read 
+      packages: write 
+      
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry (GHCR)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }} 
+
+      - name: Determine Docker Tag for Trainer
+        id: meta_train
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.actor }}/mnist-anomaly-mlops-trainer 
+          tags: |
+            type=raw,value=latest
+            type=sha,format=short
+
+      - name: Build and Push Docker Image (Trainer)
+        uses: docker/build-and-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.train 
+          platforms: linux/amd64,linux/arm64 
+          push: true
+          tags: ${{ steps.meta_train.outputs.tags }}
+          labels: ${{ steps.meta_train.outputs.labels }}
+
+  # 2. TRIGGER REMOTE TRAINING AND PUBLISH MODEL
+  train_and_publish:
+    runs-on: ubuntu-latest
+    needs: [build_and_push_trainer] # Должен ждать, пока образ будет готов
+    
+    # Этот Job будет содержать всю логику AWS, гейтинг и публикацию на HF
+    steps:
+      # Здесь будут шаги:
+      # - Настройка AWS Credentials (IAM Role/Access Key)
+      # - Запуск скрипта, который SSH-ится на EC2 и запускает Docker
+      # - Ожидание завершения тренировки
+      # - Сравнение метрик (гейтинг)
+      # - Публикация на Hugging Face (если гейтинг пройден)
+      
+      - name: Placeholder for Remote Training Logic
+        run: echo "Training on AWS EC2 will be triggered here."

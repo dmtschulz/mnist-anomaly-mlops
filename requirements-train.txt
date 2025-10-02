@@ -1,0 +1,7 @@
+torch
+torchvision
+numpy
+tqdm
+json
+argparse
+boto3

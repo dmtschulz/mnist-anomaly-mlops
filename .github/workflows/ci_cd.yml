@@ -1,6 +1,6 @@
 # .github/workflows/ci.yml
 
-name: Continuous Integration (CI)
+name: CI/CD Pipeline (Code & App Deployment)
 
 on:
   push:
@@ -45,7 +45,7 @@ jobs:
           python-version: "3.11"
           cache: 'pip'                       
           cache-dependency-path: |
-                 requirements-backend.txt
+            requirements-backend.txt
 
       - name: Install Backend Dependencies
         # Use backend file dependencies for tests
@@ -61,86 +61,14 @@ jobs:
           echo "Running fast unit tests..."
           # pytest # <--- Run this when we will have tests
 
-  # 3. CONTINUES DELIVERY (TRAIN AND PUBLISH)
-  train_and_publish:
-    if: false
-    runs-on: ubuntu-latest
-    needs: [unit_test] 
-
-    environment: production 
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: 'pip'
-          cache-dependency-path: |
-                 requirements-backend.txt
-
-      - name: Cache MNIST Data
-        uses: actions/cache@v4
-        with:
-          path: ./data 
-          key: ${{ runner.os }}-mnist-data-v1
-
-      - name: Install Training Dependencies
-        run: |
-          pip install -r requirements-backend.txt
-
-      - name: Run Model Training
-        # Run training script, it will save model.pth and metrics.txt
-        run: python src/train.py
-
-      - name: Determine new Model Tag (for versioning)
-        id: versioning
-        run: echo "NEW_TAG=v$(date +'%Y-%m-%d_%H-%M-%S')" >> $GITHUB_OUTPUT 
-        # Output: versioning.outputs.NEW_TAG will contain TAG
-
-      - name: Save Training Metric (Read Loss)
-        id: read_metric
-        # Read metric from file metrics.txt
-        run: |
-          LOSS_VALUE=$(grep "test_loss" metrics.txt | cut -d '=' -f2)
-          echo "NEW_LOSS=$LOSS_VALUE" >> $GITHUB_ENV # Save in env variable (env.NEW_LOSS)
-          echo "BEST_LOSS=${{ secrets.BEST_MODEL_LOSS }}" >> $GITHUB_ENV # Secret also in env
-          echo "New Loss: $LOSS_VALUE"
-          # --- GATING STEP: COMPARISON AND PUBLISHING ---
-      - name: Compare and Publish Model (Conditional Step)
-        # Condition: publish only, if new Loss less then best
-        if: success() && env.NEW_LOSS < env.BEST_LOSS
-        run: |
-          echo "New model is better! Publish with tag ${{ steps.versioning.outputs.NEW_TAG }}..."
-          
-          # Load on Hugging Face
-          python src/publish_model.py
-        env:
-          HF_TOKEN_WRITE: ${{ secrets.HF_TOKEN_WRITE }} 
-          NEW_TAG: ${{ steps.versioning.outputs.NEW_TAG }} 
-          REPO_ID: 'dmtschulz/anomaly-detection-model'
-
-      - name: Skip Publishing
-        if: success() && env.NEW_LOSS >= env.BEST_LOSS
-        run: |
-            echo "Model wasn't better (new Loss: ${{ env.NEW_LOSS }} vs. Best: ${{ env.BEST_LOSS }}). Skip publishing."
-
-  # 4. CONTINUES DEPLOYMENT (Build and Publish Docker)
+  # 3. CONTINUES DEPLOYMENT OF BACKEND (Build and Publish Docker)
   build_push_docker_backend:
     runs-on: ubuntu-latest
-    
+    needs: [unit_test]
+
     permissions:
       contents: read # Standard read right
       packages: write # <-- NEED FOR GHCR
-
-    if: always()
-    
-    # Запускаем только если train_and_publish успешен. 
-    # В реальном MLOps, этот job лучше настроить на триггер 'push to main',
-    # но для простоты мы оставим зависимость.
-    # needs: [train_and_publish] 
     
     steps:
       - name: Checkout Code
@@ -170,7 +98,7 @@ jobs:
             type=raw,value=latest
             type=sha,format=short # Short SHA-hash commits
 
-      - name: Build and Push Docker Image
+      - name: Build and Push Docker Image (Backend)
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -179,8 +107,10 @@ jobs:
           platforms: linux/amd64,linux/arm64 
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-  # 5. НЕПРЕРЫВНОЕ РАЗВЕРТЫВАНИЕ ФРОНТЕНДА
+  # 4. CONTINUES DEPLOYMENT OF FRONTEND
   build_push_docker_frontend:
     runs-on: ubuntu-latest
     needs: [unit_test] # Фронтенд зависит только от успешного прохождения тестов/CI
@@ -223,3 +153,5 @@ jobs:
           platforms: linux/amd64,linux/arm64 
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
