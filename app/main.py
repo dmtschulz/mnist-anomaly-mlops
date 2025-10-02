@@ -21,9 +21,9 @@ log = logging.getLogger(__name__)
 app = FastAPI()
 
 # Get Model from HF
-HF_REPO_ID = os.environ.get("HF_REPO_ID", "dmtschulz/anomaly-detection-model") 
+HF_REPO_ID = os.environ.get("HF_REPO_ID", "dmtschulz/anomaly-detection-model")
 HF_FILENAME = os.environ.get("HF_FILENAME", "autoencoder_mnist.pth")
-HF_REVISION = os.environ.get("HF_REVISION", "main") 
+HF_REVISION = os.environ.get("HF_REVISION", "main")
 
 
 # Device configuration
@@ -36,7 +36,7 @@ try:
         repo_id=HF_REPO_ID,
         filename=HF_FILENAME,
         revision=HF_REVISION,
-        cache_dir="/app/hf_cache" # Cache in folder inside container
+        cache_dir="/app/hf_cache"  # Cache in folder inside container
     )
     model = load_model(MODEL_PATH)
     model.eval()
@@ -54,9 +54,11 @@ transform = T.Compose([
     T.ToTensor()
 ])
 
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
 
 @app.post("/predict", summary="Predict anomaly score from image")
 async def predict(file: UploadFile):

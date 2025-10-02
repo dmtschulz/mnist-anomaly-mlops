@@ -26,6 +26,7 @@ MODEL_DIR = "./models"
 os.makedirs(DATA_ROOT, exist_ok=True)
 os.makedirs(MODEL_DIR, exist_ok=True)
 
+
 # Autoencoder Model
 class Autoencoder(nn.Module):
     def __init__(self, h: int = 32):
@@ -53,8 +54,10 @@ class Autoencoder(nn.Module):
         decoded = decoded.view(-1, 1, 28, 28)
         return decoded
 
+
 # Loss function
 loss_fn = nn.MSELoss()
+
 
 # Train function
 def train(loader, h=32, epochs=5, save_path=None):
@@ -78,6 +81,7 @@ def train(loader, h=32, epochs=5, save_path=None):
 
     return model
 
+
 # Save model
 def save_model(model, path):
     torch.save(model.state_dict(), path)
@@ -92,6 +96,7 @@ def load_model(path, h=32):
     model.eval()
     log.info("Model loaded from %s", path)
     return model
+
 
 # Get DataLoaders
 def get_data_loaders(batch_size=128, anomaly_class_threshold=None):
@@ -111,6 +116,7 @@ def get_data_loaders(batch_size=128, anomaly_class_threshold=None):
 
     return train_loader, test_loader
 
+
 # Predict Anomaly Score
 def predict_anomaly_score(model, x):
     model.eval()
@@ -118,6 +124,7 @@ def predict_anomaly_score(model, x):
         reconstruction = model(x.to(DEVICE))
         score = torch.mean((x - reconstruction.cpu()) ** 2, dim=(1, 2, 3))
     return score.cpu().numpy()
+
 
 # Main for getting data and testing the model
 if __name__ == "__main__":
