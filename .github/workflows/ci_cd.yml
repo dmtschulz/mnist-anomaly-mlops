@@ -4,9 +4,23 @@ name: CI/CD Pipeline (Code & App Deployment)
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
+    # ДОБАВЛЯЕМ ФИЛЬТРАЦИЮ ПО ПУТЯМ
+    paths-ignore:
+      - '.github/workflows/train.yml' # Игнорировать изменения в файле тренировки
+      - 'Dockerfile.train'             # Игнорировать изменения в Dockerfile для тренера
+      - 'requirements-train.txt'       # Игнорировать изменения в зависимостях тренировки
+      - 'src/trigger_aws_job.py'       # Игнорировать скрипт-триггер (если создадите)
+  
   pull_request:
-    branches: [ "main" ]
+    branches:
+      - main
+    paths-ignore:
+      - '.github/workflows/train.yml'
+      - 'Dockerfile.train'
+      - 'requirements-train.txt'
+      - 'src/trigger_aws_job.py'
 
 jobs:
   # 1. STATIC ANALYSIS (Linting)
