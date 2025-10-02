@@ -142,9 +142,12 @@ def train(loader,
             loss.backward()
             optimizer.step()
             pbar.set_description(f"Epoch: {epoch} Loss: {loss.item():.4f}")
+    log.info("Training complete. Loading test loader")
 
     # Оценка модели после тренировки
     _, test_loader = get_data_loaders(data_root=f"{TEMP_DIR}/data")  # Используем загруженные данные
+    log.info("Test Loader success")
+    
     final_loss = evaluate_model(model, test_loader, loss_fn)
     log.info(f"Final Test Loss: {final_loss:.6f}")
 
@@ -205,7 +208,6 @@ def get_data_loaders(batch_size=128, anomaly_class_threshold=None,
         log.warning(f"Could not save sample image: {e}")
 
     return train_loader, test_loader
-
 
 
 # Predict Anomaly Score (без изменений)
