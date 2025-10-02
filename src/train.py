@@ -66,13 +66,23 @@ def download_mnist_from_s3(
             raise
 
 
-
 def upload_file_to_s3(s3_bucket: str, local_file: str, s3_key: str):
     """Загружает файл (модель или метрики) в S3."""
     s3 = get_s3_client()
-    log.info(f"Uploading {local_file} to s3://{s3_bucket}/{s3_key}")
-    s3.upload_file(local_file, s3_bucket, s3_key)
-    log.info("Upload complete.")
+    log.info(f"Attempting to upload {local_file} to s3://{s3_bucket}/{s3_key}")
+    
+    # ПРОВЕРКА: Существует ли локальный файл?
+    if not os.path.exists(local_file):
+        log.error(f"Local file not found at: {local_file}. UPLOAD FAILED.")
+        return # Выходим из функции, если файла нет
+        
+    try:
+        s3.upload_file(local_file, s3_bucket, s3_key)
+        log.info("Upload complete.")
+    except Exception as e:
+        log.error(f"FATAL S3 UPLOAD ERROR for {s3_key}: {e}")
+        # Жестко вызываем исключение, чтобы увидеть его в Docker-логах
+        raise
 
 
 # --- МОДЕЛЬ И ФУНКЦИИ (без изменений) ---

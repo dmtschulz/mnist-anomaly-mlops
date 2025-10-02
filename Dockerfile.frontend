@@ -6,7 +6,10 @@ WORKDIR /app
 
 # Copy everything for frontend
 COPY requirements-frontend.txt .
-RUN pip install --no-cache-dir -r requirements-frontend.txt
+RUN pip install --no-cache-dir \
+    -r requirements-frontend.txt \
+    --extra-index-url https://download.pytorch.org/whl/cpu
+
 
 # Copy the Streamlit script
 COPY frontend/app.py ./app.py

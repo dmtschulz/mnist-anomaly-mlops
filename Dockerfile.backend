@@ -11,7 +11,9 @@ WORKDIR /app
 
 # Copy reqs and install them
 COPY requirements-backend.txt .
-RUN pip install --no-cache-dir -r requirements-backend.txt
+RUN pip install --no-cache-dir \
+    -r requirements-backend.txt \
+    --extra-index-url https://download.pytorch.org/whl/cpu
 
 # Copy code and model for inference
 # (Copy only what is needed for API - train.py and Streamlit are not needed)
