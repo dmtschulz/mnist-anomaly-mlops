@@ -18,7 +18,10 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: 'pip' # Кеширование pip зависимостей
+          cache: "pip"
+          cache-dependency-path: |
+            requirements-backend.txt
+            requirements-frontend.txt
 
       - name: Install Lint Dependencies (Flake8)
         run: |
@@ -42,7 +45,10 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: 'pip'
+          cache: "pip"
+          cache-dependency-path: |
+            requirements-backend.txt
+            requirements-frontend.txt
 
       - name: Install Backend Dependencies
         # Use backend file dependencies for tests
@@ -73,7 +79,10 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: 'pip'
+          cache: "pip"
+          cache-dependency-path: |
+            requirements-backend.txt
+            requirements-frontend.txt
 
       - name: Run Model Training
         # Запускаем ваш скрипт тренировки. Он сохранит model.pth и metrics.txt
