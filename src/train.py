@@ -90,21 +90,21 @@ def upload_file_to_s3(s3_bucket: str, local_file: str, s3_key: str):
 # Autoencoder Model
 class Autoencoder(nn.Module):
     # ... (Класс Autoencoder остается без изменений)
-    def __init__(self, h: int = 32):
+    def __init__(self, h: int = 32, n_wide=2048):
         super().__init__()
         self.encoder = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(784, 12000),
+            nn.Linear(784, n_wide),
             nn.Dropout(0.2),
             nn.LeakyReLU(),
-            nn.Linear(12000, h),
+            nn.Linear(n_wide, h),
             nn.LeakyReLU(),
         )
         self.decoder = nn.Sequential(
-            nn.Linear(h, 12000),
+            nn.Linear(h, n_wide),
             nn.Dropout(0.2),
             nn.LeakyReLU(),
-            nn.Linear(12000, 784),
+            nn.Linear(n_wide, 784),
             nn.Sigmoid(),
         )
 
@@ -124,6 +124,7 @@ loss_fn = nn.MSELoss()
 def train(loader,
           s3_bucket: str,
           h: int = 32,
+          n_wide = 2048,
           epochs: int = 1,
           model_key: str = "models/model.pth",
           metrics_key: str = "metrics/metrics.json"):
@@ -147,7 +148,7 @@ def train(loader,
     # Оценка модели после тренировки
     _, test_loader = get_data_loaders(data_root=f"{TEMP_DIR}/data")  # Используем загруженные данные
     log.info("Test Loader success")
-    
+
     final_loss = evaluate_model(model, test_loader, loss_fn)
     log.info(f"Final Test Loss: {final_loss:.6f}")
 
@@ -244,6 +245,8 @@ if __name__ == "__main__":
     parser.add_argument("--s3-key-metrics", default="metrics/metrics.json", help="S3 key for saving the metrics artifact.")
     parser.add_argument("--epochs", type=int, default=5, help="Number of training epochs.")
     parser.add_argument("--h-dim", type=int, default=32, help="Hidden dimension of the Autoencoder.")
+    parser.add_argument("--n-wide", type=int, default=2048, help="Intermediate wide dimension.")
+
 
     args = parser.parse_args()
 
@@ -260,6 +263,7 @@ if __name__ == "__main__":
         s3_bucket=args.s3_bucket,
         epochs=args.epochs,
         h=args.h_dim,
+        n_wide=args.n_wide,
         model_key=args.s3_key_model,
         metrics_key=args.s3_key_metrics
     )
