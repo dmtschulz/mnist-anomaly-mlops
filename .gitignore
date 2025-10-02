@@ -1,0 +1,7 @@
+.git
+__pycache__/
+*.pth
+data/MNIST
+models/
+.DS_Store
+.hf_cache_data/

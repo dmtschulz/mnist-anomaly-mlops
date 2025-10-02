@@ -1,0 +1,31 @@
+services:
+  # 1. BACKEND service (FastAPI)
+  backend:
+    build:
+      context: . # Search for Dockerfile in currect directory
+      dockerfile: Dockerfile.backend
+    ports:
+      - "8000:80" # Outer port 8000 maps onto the inner port 80
+    volumes:
+      - ./.hf_cache_data:/app/hf_cache
+    # ENV VARIABLES if needed
+    environment:
+      - HF_REPO_ID=dmtschulz/anomaly-detection-model
+      - HF_FILENAME=autoencoder_mnist.pth
+      - HF_REVISION=main # If we want to retrain we'll rename to a new branch
+
+
+  # 2. FRONTEND Service (Streamlit)
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "8501:8501" # Open port for Streamlit access
+    # Tell Streamlit to wait, before backend starts
+    depends_on:
+      - backend
+    # Env variables Streamlit, so he knows where to send requests
+    environment:
+      - API_HOST=backend
+      - API_PORT=80

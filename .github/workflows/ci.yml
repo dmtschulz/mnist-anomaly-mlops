@@ -1,0 +1,57 @@
+name: Continuous Integration (CI)
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  # 1. STATIC ANALYSIS (Linting)
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4 # Get code from Git
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Lint Dependencies (Flake8)
+        run: |
+          pip install flake8
+
+      - name: Run Flake8 Linter
+        # Check files: train.py, main.py and app.py
+        run: |
+          flake8 app/main.py src/train.py frontend/app.py --max-line-length=120 --exclude=__init__.py
+        # If this command returns error, job will fail.
+
+  # 2. FAST UNIT-TESTS (Test of correctness)
+  unit_test:
+    runs-on: ubuntu-latest
+    needs: [lint] # Run only if Linting was successful
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Backend Dependencies
+        # Use backend file dependencies for tests
+        # and install framework for testing
+        run: |
+          pip install -r requirements-backend.txt
+          pip install pytest  
+
+      # NOTE: This step assumes we have a test file (e.g., test_api.py). 
+      # Leave stub for now.
+      - name: Run Pytest (Fast Tests)
+        run: |
+          echo "Running fast unit tests..."
+          # pytest # <--- Run this when we will have tests
