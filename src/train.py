@@ -36,7 +36,9 @@ def get_s3_client():
 def download_mnist_from_s3(s3_bucket: str, s3_prefix: str = 'raw/', local_path: str = f"{TEMP_DIR}/data"):
     """Скачивает все файлы MNIST из S3 в локальную временную папку."""
     s3 = get_s3_client()
-    os.makedirs(local_path, exist_ok=True)
+    local_raw_path = os.path.join(local_path, 'raw')
+
+    os.makedirs(local_raw_path, exist_ok=True)
 
     log.info(f"Downloading MNIST data from s3://{s3_bucket}/{s3_prefix} to {local_path}...")
 
@@ -49,12 +51,12 @@ def download_mnist_from_s3(s3_bucket: str, s3_prefix: str = 'raw/', local_path: 
     for filename in tqdm(mnist_files, desc="Downloading files"):
         try:
             s3_key = os.path.join(s3_prefix, filename)
-            local_filepath = os.path.join(local_path, filename)
-
+            # Изменяем путь сохранения на local_raw_path
+            local_filepath = os.path.join(local_raw_path, filename) 
+            
             s3.download_file(s3_bucket, s3_key, local_filepath)
             log.info(f"Successfully downloaded {filename}")
         except Exception as e:
-            # Если файл не найден, это может быть проблемой.
             log.error(f"Error downloading {filename}: {e}")
             raise
 
