@@ -130,6 +130,11 @@ jobs:
   # 4. CONTINUES DEPLOYMENT (Build and Publish Docker)
   build_push_docker:
     runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read # Standard read right
+      packages: write # <-- NEED FOR GHCR
+
     if: always()
     
     # Запускаем только если train_and_publish успешен. 
