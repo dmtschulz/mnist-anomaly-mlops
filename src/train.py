@@ -32,30 +32,32 @@ def get_s3_client():
     """Возвращает S3-клиент. Он автоматически использует IAM Role, присвоенную EC2."""
     return boto3.client('s3')
 
+
 def download_mnist_from_s3(s3_bucket: str, s3_prefix: str = 'raw/', local_path: str = f"{TEMP_DIR}/data"):
     """Скачивает все файлы MNIST из S3 в локальную временную папку."""
     s3 = get_s3_client()
     os.makedirs(local_path, exist_ok=True)
-    
+
     log.info(f"Downloading MNIST data from s3://{s3_bucket}/{s3_prefix} to {local_path}...")
-    
+
     # Список имен файлов MNIST (мы знаем, какие файлы нам нужны)
     mnist_files = [
         't10k-images-idx3-ubyte', 't10k-labels-idx1-ubyte',
         'train-images-idx3-ubyte', 'train-labels-idx1-ubyte'
     ]
-    
+
     for filename in tqdm(mnist_files, desc="Downloading files"):
         try:
             s3_key = os.path.join(s3_prefix, filename)
             local_filepath = os.path.join(local_path, filename)
-            
+
             s3.download_file(s3_bucket, s3_key, local_filepath)
             log.info(f"Successfully downloaded {filename}")
         except Exception as e:
             # Если файл не найден, это может быть проблемой.
             log.error(f"Error downloading {filename}: {e}")
             raise
+
 
 def upload_file_to_s3(s3_bucket: str, local_file: str, s3_key: str):
     """Загружает файл (модель или метрики) в S3."""
@@ -95,13 +97,14 @@ class Autoencoder(nn.Module):
         decoded = decoded.view(-1, 1, 28, 28)
         return decoded
 
+
 # Loss function
 loss_fn = nn.MSELoss()
 
 
 # Train function (модифицирована для сохранения метрик в S3)
 def train(loader, s3_bucket: str, h: int = 32, epochs: int = 1, model_key: str = "models/model.pth", metrics_key: str = "metrics/metrics.json"):
-    
+
     model = Autoencoder(h).to(DEVICE)
     optimizer = optim.Adam(model.parameters(), lr=0.001)
 
@@ -125,23 +128,25 @@ def train(loader, s3_bucket: str, h: int = 32, epochs: int = 1, model_key: str =
     # 1. Сохранение модели локально
     local_model_path = f"{TEMP_DIR}/model.pth"
     torch.save(model.state_dict(), local_model_path)
-    
+
     # 2. Сохранение метрик локально
     metrics_data = {"test_loss": final_loss, "epochs": epochs, "h_dim": h}
     local_metrics_path = f"{TEMP_DIR}/metrics.json"
     with open(local_metrics_path, "w") as f:
         json.dump(metrics_data, f)
-    
+
     # 3. ЗАГРУЗКА на S3
     upload_file_to_s3(s3_bucket, local_model_path, model_key)
     upload_file_to_s3(s3_bucket, local_metrics_path, metrics_key)
 
     return model
 
+
 # Save model (больше не используется напрямую в train, но сохраним)
 def save_model(model, path):
     torch.save(model.state_dict(), path)
     log.info("Model saved to %s", path)
+
 
 # Load model (полезно для локального тестирования)
 def load_model(path, h=32):
@@ -211,7 +216,7 @@ if __name__ == "__main__":
     parser.add_argument("--s3-key-metrics", default="metrics/metrics.json", help="S3 key for saving the metrics artifact.")
     parser.add_argument("--epochs", type=int, default=5, help="Number of training epochs.")
     parser.add_argument("--h-dim", type=int, default=32, help="Hidden dimension of the Autoencoder.")
-    
+
     args = parser.parse_args()
 
     # 1. СКАЧИВАНИЕ ДАННЫХ ИЗ S3
@@ -219,7 +224,7 @@ if __name__ == "__main__":
 
     # 2. ЗАПУСК ТРЕНИРОВКИ
     train_loader, _ = get_data_loaders(data_root=f"{TEMP_DIR}/data")
-    
+
     # 3. ТРЕНИРОВКА и СОХРАНЕНИЕ В S3
     train(
         train_loader, 
