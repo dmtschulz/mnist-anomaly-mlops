@@ -72,11 +72,6 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install Training Dependencies
-        # ВАЖНО: убедитесь, что 'huggingface_hub' добавлен в requirements-backend.txt
-        run: |
-          pip install -r requirements-backend.txt
-
       - name: Run Model Training
         # Запускаем ваш скрипт тренировки. Он сохранит model.pth и metrics.txt
         run: python src/train.py
@@ -101,31 +96,12 @@ jobs:
         run: |
           echo "Новая модель лучше! Публикуем с тегом ${{ steps.versioning.outputs.NEW_TAG }}..."
           
-          # Загружаем на Hugging Face (ВЕСЬ КОД СКРИПТА В ОДНОМ БЛОКЕ)
-          python -c "
-            import os
-            from huggingface_hub import HfApi
-
-            REPO_ID = 'dmtschulz/anomaly-detection-model' 
-            FILE_PATH = 'models/autoencoder_mnist.pth' 
-            # NEW_TAG читается здесь из env
-            NEW_TAG = os.environ.get('NEW_TAG') 
-
-            api = HfApi(token='${{ secrets.HF_TOKEN_WRITE }}') 
-            api.upload_file(
-                path_or_fileobj=FILE_PATH,
-                path_in_repo=os.path.basename(FILE_PATH),
-                repo_id=REPO_ID,
-                repo_type='model',
-                revision='${{ steps.versioning.outputs.NEW_TAG }}',
-                commit_message=f'Model {NEW_TAG} trained via GitHub Actions'
-            )
-
-            print('Новая модель опубликована. Обновите BEST_MODEL_LOSS вручную в настройках GitHub.')
-            " # <-- Тут закрывающая кавычка и нет разрыва строки!
+          # Загружаем на Hugging Face
+          python src/publish_model.py
         env:
-          HF_TOKEN_WRITE: ${{ secrets.HF_TOKEN_WRITE }} 
+          HF_TOKEN: ${{ secrets.HF_TOKEN }} 
           NEW_TAG: ${{ steps.versioning.outputs.NEW_TAG }} 
+          REPO_ID: 'dmtschulz/anomaly-detection-model'
 
       - name: Skip Publishing
         if: success() && env.NEW_LOSS >= env.BEST_LOSS

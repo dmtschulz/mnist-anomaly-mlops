@@ -60,7 +60,7 @@ loss_fn = nn.MSELoss()
 
 
 # Train function
-def train(loader, h=32, epochs=5, save_path=None):
+def train(loader, h=32, epochs=1, save_path=None):
     model = Autoencoder(h).to(DEVICE)
     optimizer = optim.Adam(model.parameters(), lr=0.001)
 
@@ -74,7 +74,7 @@ def train(loader, h=32, epochs=5, save_path=None):
             loss = loss_fn(prediction, batch)
             loss.backward()
             optimizer.step()
-            pbar.set_description(f"Loss: {loss.item():.4f}")
+            pbar.set_description(f"Epoch: {epoch} Loss: {loss.item():.4f}")
 
     if save_path:
         save_model(model, save_path)
