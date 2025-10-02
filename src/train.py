@@ -217,23 +217,11 @@ def evaluate_model(model: nn.Module, loader: DataLoader, loss_fn: nn.Module) -> 
 # --- MAIN ENTRY POINT ---
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run MNIST Autoencoder Training.")
-    parser.add_argument("--s3-bucket", 
-                        required=True, 
-                        help="Name of the S3 bucket for data/artifact storage.")
-    parser.add_argument("--s3-key-model", 
-                        default="models/autoencoder_mnist.pth", 
-                        help="S3 key for saving the model artifact.")
-    parser.add_argument("--s3-key-metrics", 
-                        default="metrics/metrics.json", 
-                        help="S3 key for saving the metrics artifact.")
-    parser.add_argument("--epochs", 
-                        type=int, 
-                        default=5, 
-                        help="Number of training epochs.")
-    parser.add_argument("--h-dim", 
-                        type=int, 
-                        default=32, 
-                        help="Hidden dimension of the Autoencoder.")
+    parser.add_argument("--s3-bucket", required=True, help="Name of the S3 bucket for data/artifact storage.")
+    parser.add_argument("--s3-key-model", default="models/autoencoder_mnist.pth", help="S3 key for saving the model artifact.")
+    parser.add_argument("--s3-key-metrics", default="metrics/metrics.json", help="S3 key for saving the metrics artifact.")
+    parser.add_argument("--epochs", type=int, default=5, help="Number of training epochs.")
+    parser.add_argument("--h-dim", type=int, default=32, help="Hidden dimension of the Autoencoder.")
 
     args = parser.parse_args()
 

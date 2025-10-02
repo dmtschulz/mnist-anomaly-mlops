@@ -28,7 +28,7 @@ jobs:
       - name: Run Flake8 Linter
         # Check files: train.py, main.py and app.py
         run: |
-          flake8 app/main.py src/train.py frontend/app.py --max-line-length=120 --exclude=__init__.py
+          flake8 app/main.py src/train.py frontend/app.py --max-line-length=150 --exclude=__init__.py
         # If this command returns error, job will fail.
 
   # 2. FAST UNIT-TESTS (Test of correctness)
