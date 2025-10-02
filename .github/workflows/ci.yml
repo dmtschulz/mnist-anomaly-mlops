@@ -83,30 +83,30 @@ jobs:
           pip install -r requirements-backend.txt
 
       - name: Run Model Training
-        # Запускаем ваш скрипт тренировки. Он сохранит model.pth и metrics.txt
+        # Run training script, it will save model.pth and metrics.txt
         run: python src/train.py
 
       - name: Determine new Model Tag (for versioning)
         id: versioning
-        run: echo "NEW_TAG=v$(date +'%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT 
-        # Output: versioning.outputs.NEW_TAG будет содержать тег
+        run: echo "NEW_TAG=v$(date +'%Y-%m-%d_%H-%M-%S')" >> $GITHUB_OUTPUT 
+        # Output: versioning.outputs.NEW_TAG will contain TAG
 
       - name: Save Training Metric (Read Loss)
         id: read_metric
-        # Считываем метрику из файла metrics.txt
+        # Read metric from file metrics.txt
         run: |
           LOSS_VALUE=$(grep "test_loss" metrics.txt | cut -d '=' -f2)
-          echo "NEW_LOSS=$LOSS_VALUE" >> $GITHUB_ENV # Сохраняем в переменную среды (env.NEW_LOSS)
-          echo "BEST_LOSS=${{ secrets.BEST_MODEL_LOSS }}" >> $GITHUB_ENV # Секрет тоже в env
+          echo "NEW_LOSS=$LOSS_VALUE" >> $GITHUB_ENV # Save in env variable (env.NEW_LOSS)
+          echo "BEST_LOSS=${{ secrets.BEST_MODEL_LOSS }}" >> $GITHUB_ENV # Secret also in env
           echo "New Loss: $LOSS_VALUE"
-          # --- ШАГ ГЕЙТИНГА: СРАВНЕНИЕ И ПУБЛИКАЦИЯ ---
+          # --- GATING STEP: COMPARISON AND PUBLISHING ---
       - name: Compare and Publish Model (Conditional Step)
-        # Условие: публиковать, только если новый Loss меньше лучшего
+        # Condition: publish only, if new Loss less then best
         if: success() && env.NEW_LOSS < env.BEST_LOSS
         run: |
-          echo "Новая модель лучше! Публикуем с тегом ${{ steps.versioning.outputs.NEW_TAG }}..."
+          echo "New model is better! Publish with tag ${{ steps.versioning.outputs.NEW_TAG }}..."
           
-          # Загружаем на Hugging Face
+          # Load on Hugging Face
           python src/publish_model.py
         env:
           HF_TOKEN_WRITE: ${{ secrets.HF_TOKEN_WRITE }} 
@@ -116,4 +116,4 @@ jobs:
       - name: Skip Publishing
         if: success() && env.NEW_LOSS >= env.BEST_LOSS
         run: |
-            echo "Модель не улучшилась (новый Loss: ${{ env.NEW_LOSS }} vs. Best: ${{ env.BEST_LOSS }}). Пропускаем публикацию."
+            echo "Model wasn't better (new Loss: ${{ env.NEW_LOSS }} vs. Best: ${{ env.BEST_LOSS }}). Skip publishing."
