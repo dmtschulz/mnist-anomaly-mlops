@@ -44,9 +44,6 @@ try:
 except Exception as e:
     raise RuntimeError(f"Failed to load model from Hugging Face: {e}")
 
-model = load_model(MODEL_PATH)
-model.eval()
-
 # Transformations
 transform = T.Compose([
     T.Grayscale(num_output_channels=1),
@@ -56,8 +53,11 @@ transform = T.Compose([
 
 
 @app.get("/health")
-def health():
-    return {"status": "ok"}
+def health_check():
+    # Check if model has been initialized
+    if model is None:
+        raise HTTPException(status_code=503, detail="Model service unavailable")
+    return {"status": "ok", "model_revision": HF_REVISION}
 
 
 @app.post("/predict", summary="Predict anomaly score from image")

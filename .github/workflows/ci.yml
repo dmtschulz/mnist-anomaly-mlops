@@ -1,3 +1,5 @@
+# .github/workflows/ci.yml
+
 name: Continuous Integration (CI)
 
 on:
@@ -41,8 +43,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: 'pip'                       # <-- включаем кеш
-          cache-dependency-path: |           # <-- файлы, влияющие на ключ кеша
+          cache: 'pip'                       
+          cache-dependency-path: |
                  requirements-backend.txt
 
       - name: Install Backend Dependencies
@@ -59,8 +61,9 @@ jobs:
           echo "Running fast unit tests..."
           # pytest # <--- Run this when we will have tests
 
-  # 3. НЕПРЕРЫВНАЯ ДОСТАВКА (Обучение и Публикация)
+  # 3. CONTINUES DELIVERY (TRAIN AND PUBLISH)
   train_and_publish:
+    if: false
     runs-on: ubuntu-latest
     needs: [unit_test] 
 
@@ -77,6 +80,12 @@ jobs:
           cache: 'pip'
           cache-dependency-path: |
                  requirements-backend.txt
+
+      - name: Cache MNIST Data
+        uses: actions/cache@v4
+        with:
+          path: ./data 
+          key: ${{ runner.os }}-mnist-data-v1
 
       - name: Install Training Dependencies
         run: |
@@ -117,3 +126,47 @@ jobs:
         if: success() && env.NEW_LOSS >= env.BEST_LOSS
         run: |
             echo "Model wasn't better (new Loss: ${{ env.NEW_LOSS }} vs. Best: ${{ env.BEST_LOSS }}). Skip publishing."
+
+  # 4. CONTINUES DEPLOYMENT (Build and Publish Docker)
+  build_and_push_docker:
+    runs-on: ubuntu-latest
+    if: always()
+    
+    # Запускаем только если train_and_publish успешен. 
+    # В реальном MLOps, этот job лучше настроить на триггер 'push to main',
+    # но для простоты мы оставим зависимость.
+    # needs: [train_and_publish] 
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry (GHCR)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          # GITHUB_TOKEN proposed by GitHub and has write rights for GHCR
+          password: ${{ secrets.GITHUB_TOKEN }} 
+
+      - name: Determine Docker Tag
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          # Image name will be: ghcr.io/<USER_NAME>/<REPOSITORY>
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=latest
+            type=sha,format=short # Short SHA-hash commits
+
+      - name: Build and Push Docker Image
+        uses: docker/build-and-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.backend 
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
