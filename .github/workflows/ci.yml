@@ -160,7 +160,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           # Image name will be: ghcr.io/<USER_NAME>/<REPOSITORY>
-          images: ghcr.io/${{ github.repository }}
+          images: ghcr.io/${{ github.actor }}/mnist-anomaly-mlops
           tags: |
             type=raw,value=latest
             type=sha,format=short # Short SHA-hash commits
