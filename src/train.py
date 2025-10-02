@@ -104,12 +104,12 @@ loss_fn = nn.MSELoss()
 
 # Train function (модифицирована для сохранения метрик в S3)
 def train(loader,
-          s3_bucket: str,
-          h: int = 32,
-          epochs: int = 1,
-          model_key: str = "models/model.pth",
-          metrics_key: str = "metrics/metrics.json"
-        ):
+    s3_bucket: str,
+    h: int = 32,
+    epochs: int = 1,
+    model_key: str = "models/model.pth",
+    metrics_key: str = "metrics/metrics.json"
+):
 
     model = Autoencoder(h).to(DEVICE)
     optimizer = optim.Adam(model.parameters(), lr=0.001)
