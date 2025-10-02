@@ -72,6 +72,10 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Install Training Dependencies
+        run: |
+          pip install -r requirements-backend.txt
+
       - name: Run Model Training
         # Запускаем ваш скрипт тренировки. Он сохранит model.pth и metrics.txt
         run: python src/train.py
