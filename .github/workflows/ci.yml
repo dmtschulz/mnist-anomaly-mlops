@@ -92,11 +92,12 @@ jobs:
         run: |
           LOSS_VALUE=$(grep "test_loss" metrics.txt | cut -d '=' -f2)
           echo "NEW_LOSS=$LOSS_VALUE" >> $GITHUB_ENV # Сохраняем в переменную среды (env.NEW_LOSS)
+          echo "BEST_LOSS=${{ secrets.BEST_MODEL_LOSS }}" >> $GITHUB_ENV # Секрет тоже в env
           echo "New Loss: $LOSS_VALUE"
           # --- ШАГ ГЕЙТИНГА: СРАВНЕНИЕ И ПУБЛИКАЦИЯ ---
       - name: Compare and Publish Model (Conditional Step)
-        # Условие: публиковать, только если новый Loss меньше лучшего (secrets.BEST_MODEL_LOSS)
-        if: success() && env.NEW_LOSS < secrets.BEST_MODEL_LOSS 
+        # Условие: публиковать, только если новый Loss меньше лучшего
+        if: success() && env.NEW_LOSS < env.BEST_LOSS
         run: |
           echo "Новая модель лучше! Публикуем с тегом ${{ steps.versioning.outputs.NEW_TAG }}..."
           
@@ -127,6 +128,6 @@ jobs:
           NEW_TAG: ${{ steps.versioning.outputs.NEW_TAG }} 
 
       - name: Skip Publishing
-        if: success() && env.NEW_LOSS >= secrets.BEST_MODEL_LOSS
+        if: success() && env.NEW_LOSS >= env.BEST_LOSS
         run: |
-            echo "Модель не улучшилась (новый Loss: ${{ env.NEW_LOSS }} vs. Best: ${{ secrets.BEST_MODEL_LOSS }}). Пропускаем публикацию."
+            echo "Модель не улучшилась (новый Loss: ${{ env.NEW_LOSS }} vs. Best: ${{ env.BEST_LOSS }}). Пропускаем публикацию."
