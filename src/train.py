@@ -33,32 +33,38 @@ def get_s3_client():
     return boto3.client('s3')
 
 
-def download_mnist_from_s3(s3_bucket: str, s3_prefix: str = 'raw/', local_path: str = f"{TEMP_DIR}/data"):
-    """Скачивает все файлы MNIST из S3 в локальную временную папку."""
+# --- AUXILIARY S3 FUNCTIONS ---
+def download_mnist_from_s3(
+    s3_bucket: str,
+    s3_prefix: str = 'raw/',           # в S3 у тебя anomaly-mlops-mnist-data/raw/...
+    local_path: str = f"{TEMP_DIR}/data"
+):
+    """Скачивает gz-файлы MNIST из S3 в <local_path>/MNIST/raw"""
     s3 = get_s3_client()
-    local_raw_path = os.path.join(local_path, 'raw')
-
+    # <root>/MNIST/raw — именно так ждёт torchvision
+    local_raw_path = os.path.join(local_path, 'MNIST', 'raw')
     os.makedirs(local_raw_path, exist_ok=True)
 
-    log.info(f"Downloading MNIST data from s3://{s3_bucket}/{s3_prefix} to {local_path}...")
+    log.info(f"Downloading MNIST data from s3://{s3_bucket}/{s3_prefix} to {local_raw_path}...")
 
-    # Список имен файлов MNIST (мы знаем, какие файлы нам нужны)
+    # ВАЖНО: именно .gz имена
     mnist_files = [
-        't10k-images-idx3-ubyte', 't10k-labels-idx1-ubyte',
-        'train-images-idx3-ubyte', 'train-labels-idx1-ubyte'
+        'train-images-idx3-ubyte.gz',
+        'train-labels-idx1-ubyte.gz',
+        't10k-images-idx3-ubyte.gz',
+        't10k-labels-idx1-ubyte.gz',
     ]
 
     for filename in tqdm(mnist_files, desc="Downloading files"):
+        s3_key = os.path.join(s3_prefix, filename)
+        local_filepath = os.path.join(local_raw_path, filename)
         try:
-            s3_key = os.path.join(s3_prefix, filename)
-            # Изменяем путь сохранения на local_raw_path
-            local_filepath = os.path.join(local_raw_path, filename) 
-            
             s3.download_file(s3_bucket, s3_key, local_filepath)
             log.info(f"Successfully downloaded {filename}")
         except Exception as e:
-            log.error(f"Error downloading {filename}: {e}")
+            log.error(f"Error downloading {filename} from s3://{s3_bucket}/{s3_key}: {e}")
             raise
+
 
 
 def upload_file_to_s3(s3_bucket: str, local_file: str, s3_key: str):
@@ -165,28 +171,31 @@ def load_model(path, h=32):
     return model
 
 
-# Get DataLoaders (модифицирована для работы с предварительно скачанными данными)
-def get_data_loaders(batch_size=128, anomaly_class_threshold=None, data_root: str = f"{TEMP_DIR}/data"):
+# Get DataLoaders: позволим форсировать обработку из raw
+def get_data_loaders(batch_size=128, anomaly_class_threshold=None,
+                     data_root: str = f"{TEMP_DIR}/data",
+                     ensure_processed: bool = False):
     transform = T.ToTensor()
-    # download=False, т.к. данные уже должны быть в data_root (скачаны из S3)
-    train_dataset = MNIST(data_root, train=True, download=False, transform=transform)
-    test_dataset = MNIST(data_root, train=False, download=False, transform=transform)
+    # Если ensure_processed=True — один раз разрешаем download,
+    # чтобы из локальных raw/*.gz собрать processed/*.pt
+    train_dataset = MNIST(data_root, train=True, download=ensure_processed, transform=transform)
+    test_dataset  = MNIST(data_root, train=False, download=ensure_processed, transform=transform)
 
     if anomaly_class_threshold is not None:
         indices = np.where(train_dataset.targets < anomaly_class_threshold)[0]
         train_dataset = Subset(train_dataset, indices)
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size)
+    test_loader  = DataLoader(test_dataset, batch_size=batch_size)
 
     try:
-        # Сохранение примера в TEMP_DIR, а не в корне
         img, _ = test_dataset[6]
         save_image(img, f"{TEMP_DIR}/sample_mnist.png")
     except Exception as e:
         log.warning(f"Could not save sample image: {e}")
 
     return train_loader, test_loader
+
 
 
 # Predict Anomaly Score (без изменений)
@@ -229,10 +238,11 @@ if __name__ == "__main__":
     # 1. СКАЧИВАНИЕ ДАННЫХ ИЗ S3
     download_mnist_from_s3(args.s3_bucket)
 
-    # 2. ЗАПУСК ТРЕНИРОВКИ
-    train_loader, _ = get_data_loaders(data_root=f"{TEMP_DIR}/data")
 
-    # 3. ТРЕНИРОВКА и СОХРАНЕНИЕ В S3
+    # 2) первый вызов — ensure_processed=True, чтобы собрать processed/*.pt
+    train_loader, _ = get_data_loaders(data_root=f"{TEMP_DIR}/data", ensure_processed=True)
+
+    # 3) тренировка
     train(
         train_loader,
         s3_bucket=args.s3_bucket,
