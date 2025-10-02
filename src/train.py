@@ -157,7 +157,7 @@ def train(loader,
     torch.save(model.state_dict(), local_model_path)
 
     # 2. Сохранение метрик локально
-    metrics_data = {"test_loss": final_loss, "epochs": epochs, "h_dim": h}
+    metrics_data = {"test_loss": final_loss, "epochs": epochs, "h_dim": h, "n_wide": n_wide}
     local_metrics_path = f"{TEMP_DIR}/metrics.json"
     with open(local_metrics_path, "w") as f:
         json.dump(metrics_data, f)
