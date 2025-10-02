@@ -103,13 +103,13 @@ loss_fn = nn.MSELoss()
 
 
 # Train function (модифицирована для сохранения метрик в S3)
-def train(loader, 
-          s3_bucket: str, 
-          h: int = 32, 
-          epochs: int = 1, 
-          model_key: str = "models/model.pth", 
+def train(loader,
+          s3_bucket: str,
+          h: int = 32,
+          epochs: int = 1,
+          model_key: str = "models/model.pth",
           metrics_key: str = "metrics/metrics.json"
-):
+        ):
 
     model = Autoencoder(h).to(DEVICE)
     optimizer = optim.Adam(model.parameters(), lr=0.001)
@@ -127,7 +127,7 @@ def train(loader,
             pbar.set_description(f"Epoch: {epoch} Loss: {loss.item():.4f}")
 
     # Оценка модели после тренировки
-    _, test_loader = get_data_loaders(data_root=f"{TEMP_DIR}/data") # Используем загруженные данные
+    _, test_loader = get_data_loaders(data_root=f"{TEMP_DIR}/data")  # Используем загруженные данные
     final_loss = evaluate_model(model, test_loader, loss_fn)
     log.info(f"Final Test Loss: {final_loss:.6f}")
 
@@ -233,10 +233,10 @@ if __name__ == "__main__":
 
     # 3. ТРЕНИРОВКА и СОХРАНЕНИЕ В S3
     train(
-        train_loader, 
-        s3_bucket=args.s3_bucket, 
-        epochs=args.epochs, 
+        train_loader,
+        s3_bucket=args.s3_bucket,
+        epochs=args.epochs,
         h=args.h_dim,
-        model_key=args.s3_key_model, 
+        model_key=args.s3_key_model,
         metrics_key=args.s3_key_metrics
     )
