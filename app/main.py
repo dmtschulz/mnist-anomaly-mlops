@@ -55,7 +55,7 @@ def load_model_from_s3():
         log.info("Модель успешно скачана. Инициализация...")
         
         # Инициализируем модель и загружаем веса
-        model = load_model(LOCAL_MODEL_PATH) # Предполагаем, что load_model создает пустой экземпляр
+        model = load_model(LOCAL_MODEL_PATH)
         log.info(f"Модель {MODEL_S3_KEY} успешно инициализирована.")
         MODEL_LOADED_SUCCESSFULLY = True
         
@@ -68,12 +68,15 @@ def load_model_from_s3():
 async def startup_event():
     log.info("Запуск startup event: Инициализация модели.")
     load_model_from_s3()
+
+
 # Transformations
 transform = T.Compose([
     T.Grayscale(num_output_channels=1),
     T.Resize((28, 28)),
     T.ToTensor()
 ])
+
 
 # --- HEALTH CHECK ---
 @app.get("/health")

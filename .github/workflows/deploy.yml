@@ -93,21 +93,25 @@ jobs:
           SSM_COMMAND="
           # 1. Настройка рабочей среды
           DEPLOY_DIR=/opt/mlops-deploy
-          sudo mkdir -p $DEPLOY_DIR
-          sudo chown -R ec2-user:ec2-user $DEPLOY_DIR
-          cd $DEPLOY_DIR
           
-          # 2. Скачивание docker-compose из S3
+          # Создаем папку с root-правами
+          sudo mkdir -p $DEPLOY_DIR 
+          
+          # 🚨 Передаем права, но это уже может быть не нужно, если SSM user - ec2-user
+          # Если команда падает на 'cd $DEPLOY_DIR', добавьте обратно: sudo chown -R ec2-user:ec2-user $DEPLOY_DIR
+          
+          cd $DEPLOY_DIR # Теперь ec2-user может войти
+          
+          # 2. Скачивание docker-compose
           aws s3 cp s3://${{ env.S3_BUCKET_NAME }}/deployment/docker-compose.yml ./docker-compose.yml
           
           # 3. ЭКСПОРТ ПЕРЕМЕННЫХ
           export AWS_REGION=${{ env.AWS_REGION }}
           export S3_BUCKET_NAME=${{ env.S3_BUCKET_NAME }}
           
-          # 4. 🚨 АУТЕНТИФИКАЦИЯ DOCKER (С ИСПОЛЬЗОВАНИЕМ sudo)
-          # Используем sudo, чтобы гарантировать, что логин проходит с нужными правами.
-          # Также убеждаемся, что переменная GH_TOKEN передается корректно.
-          echo ${{ env.GH_TOKEN }} | sudo docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          # 4. Аутентификация Docker в GHCR
+          # Используем docker login без sudo, так как мы - ec2-user
+          echo ${{ env.GH_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
           
           # 5. Обновление образов и запуск
           docker compose pull
@@ -120,4 +124,5 @@ jobs:
             --document-name "AWS-RunShellScript" \
             --comment "MLOps Deployment" \
             --parameters commands="$SSM_COMMAND" \
+            --parameters user="ec2-user" \
             --output text
