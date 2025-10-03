@@ -50,7 +50,7 @@ jobs:
 # 2. РАЗВЕРТЫВАНИЕ НА EC2 ЧЕРЕЗ SSM
   deploy_to_ec2:
     runs-on: ubuntu-latest
-    needs: [build_and_push_deployment]
+    #needs: [build_and_push_deployment]
     
     env:
       AWS_REGION: ${{ secrets.AWS_REGION }}
