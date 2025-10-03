@@ -12,7 +12,7 @@ env:
   
   # Настройки AWS Deployment
   AWS_REGION: ${{ secrets.AWS_REGION }}
-  DEPLOYMENT_INSTANCE_NAME: mnist-anomaly-MLOps-Deployment-Server # Имя вашего нового инстанса
+  DEPLOYMENT_INSTANCE_NAME: MNIST-anomaly-MLOps-Deployment-Server # Имя вашего нового инстанса
   
 
 jobs:
