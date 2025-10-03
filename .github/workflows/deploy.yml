@@ -93,22 +93,21 @@ jobs:
           SSM_COMMAND="
           # 1. Настройка рабочей среды
           DEPLOY_DIR=/opt/mlops-deploy
-          
-          # Создаем директорию и передаем права ec2-user, чтобы избежать ошибки Errno 13
           sudo mkdir -p $DEPLOY_DIR
           sudo chown -R ec2-user:ec2-user $DEPLOY_DIR
           cd $DEPLOY_DIR
           
-          # 2. Скачивание docker-compose из S3 (Используем env.S3_BUCKET_NAME)
+          # 2. Скачивание docker-compose из S3
           aws s3 cp s3://${{ env.S3_BUCKET_NAME }}/deployment/docker-compose.yml ./docker-compose.yml
           
-          # 3. ЭКСПОРТ ПЕРЕМЕННЫХ для Docker Compose
-          # GitHub Actions подставит значения secrets/env сюда, прежде чем отправить команду
+          # 3. ЭКСПОРТ ПЕРЕМЕННЫХ
           export AWS_REGION=${{ env.AWS_REGION }}
           export S3_BUCKET_NAME=${{ env.S3_BUCKET_NAME }}
           
-          # 4. Аутентификация Docker в GHCR (Используем GH_TOKEN из env)
-          echo ${{ env.GH_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          # 4. 🚨 АУТЕНТИФИКАЦИЯ DOCKER (С ИСПОЛЬЗОВАНИЕМ sudo)
+          # Используем sudo, чтобы гарантировать, что логин проходит с нужными правами.
+          # Также убеждаемся, что переменная GH_TOKEN передается корректно.
+          echo ${{ env.GH_TOKEN }} | sudo docker login ghcr.io -u ${{ github.actor }} --password-stdin
           
           # 5. Обновление образов и запуск
           docker compose pull
