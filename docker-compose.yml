@@ -19,7 +19,7 @@ services:
     environment:
       # ПЕРЕДАЧА ИМЕНИ S3 БАКЕТА В КОНТЕЙНЕР
       - S3_BUCKET_NAME=anomaly-mlops-mnist-data # Ваше точное имя бакета
-      - AWS_REGION=${{ secrets.AWS_REGION }} # Передаем регион, если нужно для Boto3
+      - AWS_REGION=$AWS_REGION # Передаем регион, если нужно для Boto3
       - BACKEND_PORT=5000
 
   # 2. FRONTEND Service (Streamlit)
