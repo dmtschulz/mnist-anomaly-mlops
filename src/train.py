@@ -126,7 +126,7 @@ def train(loader,
           h: int = 32,
           n_wide = 2048,
           epochs: int = 1,
-          model_key: str = "models/model.pth",
+          model_key: str = "models/candidate_model.pth",
           metrics_key: str = "metrics/metrics.json"):
 
     model = Autoencoder(h).to(DEVICE)
@@ -153,7 +153,7 @@ def train(loader,
     log.info(f"Final Test Loss: {final_loss:.6f}")
 
     # 1. Сохранение модели локально
-    local_model_path = f"{TEMP_DIR}/model.pth"
+    local_model_path = f"{TEMP_DIR}/candidate_model.pth"
     torch.save(model.state_dict(), local_model_path)
 
     # 2. Сохранение метрик локально
@@ -241,7 +241,7 @@ def evaluate_model(model: nn.Module, loader: DataLoader, loss_fn: nn.Module) -> 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run MNIST Autoencoder Training.")
     parser.add_argument("--s3-bucket", required=True, help="Name of the S3 bucket for data/artifact storage.")
-    parser.add_argument("--s3-key-model", default="models/autoencoder_mnist.pth", help="S3 key for saving the model artifact.")
+    parser.add_argument("--s3-key-model", default="models/candidate_model.pth", help="S3 key for saving the model artifact.")
     parser.add_argument("--s3-key-metrics", default="metrics/metrics.json", help="S3 key for saving the metrics artifact.")
     parser.add_argument("--epochs", type=int, default=5, help="Number of training epochs.")
     parser.add_argument("--h-dim", type=int, default=32, help="Hidden dimension of the Autoencoder.")
