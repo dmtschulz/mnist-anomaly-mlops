@@ -71,7 +71,7 @@ jobs:
   
   train_and_publish:
     runs-on: ubuntu-latest
-    needs: [build_and_push_trainer] # Ждем успешной сборки
+    #needs: [build_and_push_trainer] # Ждем успешной сборки
     
     # Настраиваем переменные окружения AWS
     env:
