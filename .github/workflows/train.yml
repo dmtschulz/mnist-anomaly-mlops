@@ -22,7 +22,7 @@ env:
   TRAINING_EPOCHS: ${{ github.event.inputs.epochs || '1' }}
   
   # Наш EC2 инстанс
-  EC2_INSTANCE_NAME: mnist-anomaly-MLOps-Train-Worker
+  EC2_INSTANCE_NAME: MNIST-Anomaly-MLOps-Train-Worker
   
   # Никнейм для GHCR (если он отличается от github.actor)
   # Мы используем github.actor для простоты, но оставляем возможность замены
