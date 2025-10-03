@@ -4,7 +4,7 @@ import os
 from huggingface_hub import HfApi, CommitOperationAdd
 
 # 1. Read all variables from env
-HF_TOKEN = os.environ.get('HF_TOKEN_WRITE')
+HF_TOKEN_WRITE = os.environ.get('HF_TOKEN_WRITE')
 NEW_TAG = os.environ.get('NEW_TAG')
 REPO_ID = os.environ.get('REPO_ID')
 
@@ -12,12 +12,12 @@ TARGET_REVISION = 'candidate'
 MODEL_PATH = 'models/autoencoder_mnist.pth' 
 
 if __name__ == "__main__":
-    if not HF_TOKEN or not NEW_TAG or not REPO_ID or not MODEL_PATH or not TARGET_REVISION:
-        raise EnvironmentError("Env Variables not set: HF_TOKEN, NEW_TAG, REPO_ID, MODEL_PATH, TARGET_REVISION.")
+    if not HF_TOKEN_WRITE or not NEW_TAG or not REPO_ID or not MODEL_PATH or not TARGET_REVISION:
+        raise EnvironmentError("Env Variables not set: HF_TOKEN_WRITE, NEW_TAG, REPO_ID, MODEL_PATH, TARGET_REVISION.")
         
     print(f"-> Starting publishing the model with tag: {NEW_TAG}...")
 
-    api = HfApi(token=HF_TOKEN)
+    api = HfApi(token=HF_TOKEN_WRITE)
 
     try:
         # 1. Commit model in TARGET_REVISION branch

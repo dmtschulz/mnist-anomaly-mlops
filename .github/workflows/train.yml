@@ -69,7 +69,7 @@ jobs:
 
   # 2. TRIGGER REMOTE TRAINING AND PUBLISH MODEL
   
-  train_and_publish:
+  train_on_ec2:
     runs-on: ubuntu-latest
     #needs: [build_and_push_trainer] # Ждем успешной сборки
     
@@ -139,3 +139,49 @@ jobs:
           INSTANCE_ID=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=${{ env.EC2_INSTANCE_NAME }}" --query "Reservations[].Instances[].InstanceId" --output text)
           aws ec2 stop-instances --instance-ids "$INSTANCE_ID"
           echo "EC2 instance stopped."
+
+  # 3. GATING (АВТОМАТИЧЕСКИЙ КОНТРОЛЬ КАЧЕСТВА)
+  gating_and_publish:
+    runs-on: ubuntu-latest
+    needs: [train_on_ec2] # Запускаем только после успешной тренировки
+    
+    # Настраиваем переменные окружения
+    env:
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      S3_BUCKET_NAME: anomaly-mlops-mnist-data # Используем ваше имя бакета
+
+    steps:
+      - name: Checkout Code (for access to src/gating.py)
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Dependencies for Gating (Boto3)
+        run: pip install boto3
+
+      - name: Configure AWS Credentials for Runner
+        # Настраиваем AWS-права для Runner, чтобы он мог читать/писать в S3
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+          
+      - name: Gating, Compare Metrics and Promote Model in S3
+        id: gating_step
+        # Используем современный способ захвата output (v2)
+        run: |
+          # Запускаем скрипт, результат отправляется в файл $GITHUB_OUTPUT
+          python src/gating.py --s3-bucket ${{ env.S3_BUCKET_NAME }} >> $GITHUB_OUTPUT
+        
+      - name: Gating Result
+        # Этот шаг просто показывает, прошла ли модель проверку
+        run: |
+          if [ "${{ steps.gating_step.outputs.is_best }}" = "true" ]; then
+            echo "✅ МОДЕЛЬ ПРОШЛА ГЕЙТИНГ и была продвинута в best_model.pth!"
+          else
+            echo "❌ МОДЕЛЬ НЕ ПРОШЛА ГЕЙТИНГ. best_model.pth не обновлен."
+          fi
