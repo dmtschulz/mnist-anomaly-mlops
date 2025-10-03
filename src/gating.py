@@ -67,7 +67,12 @@ if __name__ == "__main__":
     
     result = compare_and_gate(args.s3_bucket)
     
-    # Сохраняем результат для следующего шага в GitHub Actions
-    print(f"GATING_RESULT={result}")
-    # Устанавливаем выходную переменную для доступа в if:
-    print(f"::set-output name=is_best::{'true' if result else 'false'}")
+    # Получаем путь к файлу вывода
+    github_output_path = os.environ.get('GITHUB_OUTPUT')
+    
+    if github_output_path:
+        with open(github_output_path, 'a') as f:
+            f.write(f"is_best={'true' if result else 'false'}\n")
+            
+    # Дополнительная строка для лога, чтобы видеть результат
+    print(f"--- GATING_RESULT: {'TRUE' if result else 'FALSE'} ---")

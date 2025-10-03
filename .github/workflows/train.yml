@@ -173,15 +173,4 @@ jobs:
       - name: Gating, Compare Metrics and Promote Model in S3
         id: gating_step
         # Используем современный способ захвата output (v2)
-        run: |
-          # Запускаем скрипт, результат отправляется в файл $GITHUB_OUTPUT
-          python src/gating.py --s3-bucket ${{ env.S3_BUCKET_NAME }} >> $GITHUB_OUTPUT
-        
-      - name: Gating Result
-        # Этот шаг просто показывает, прошла ли модель проверку
-        run: |
-          if [ "${{ steps.gating_step.outputs.is_best }}" = "true" ]; then
-            echo "✅ МОДЕЛЬ ПРОШЛА ГЕЙТИНГ и была продвинута в best_model.pth!"
-          else
-            echo "❌ МОДЕЛЬ НЕ ПРОШЛА ГЕЙТИНГ. best_model.pth не обновлен."
-          fi
+        run: python src/gating.py --s3-bucket ${{ env.S3_BUCKET_NAME }}
