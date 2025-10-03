@@ -13,6 +13,7 @@ env:
 jobs:
   # 1. СБОРКА И ПУБЛИКАЦИЯ ОБОИХ ОБРАЗОВ
   build_and_push_deployment:
+    if: false
     runs-on: ubuntu-latest
     permissions:
       contents: read # Чтобы читать код
@@ -124,5 +125,5 @@ jobs:
             --document-name "AWS-RunShellScript" \
             --comment "MLOps Deployment" \
             --parameters commands="$SSM_COMMAND" \
-            --parameters user="ec2-user" \
+            --user "ec2-user" \ 
             --output text
