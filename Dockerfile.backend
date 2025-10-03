@@ -19,12 +19,7 @@ RUN pip install --no-cache-dir \
 # (Copy only what is needed for API - train.py and Streamlit are not needed)
 COPY app/ ./app/ 
 COPY src/ ./src/
-# Copy Model
-COPY models/ ./models/
-
-# Set ENV VARIABLE
-ENV MODEL_PATH=/app/models/autoencoder_mnist.pth
 
 # Run FastAPI on standard port (80)
-EXPOSE 80
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80"]
+EXPOSE 5000
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "5000"]

@@ -1,48 +1,82 @@
-# app/main.py
+# app/main.py (ОБНОВЛЕННЫЙ ДЛЯ S3)
 
 import os
-from huggingface_hub import hf_hub_download
-from fastapi import FastAPI, UploadFile, HTTPException
-from fastapi.responses import JSONResponse
-from PIL import Image
-import torch
-from torchvision import transforms as T
-from src.train import load_model, loss_fn  # Load the model and loss function from src/train.py
 import io
+import base64
+import logging
 from io import BytesIO
 
-import base64
+import torch
+import boto3
+from torchvision import transforms as T
+
+from fastapi import FastAPI, UploadFile, HTTPException
+from fastapi.responses import JSONResponse
+
+from PIL import Image
+from src.train import load_model, loss_fn # Предполагаем, что load_model и loss_fn доступны
 import matplotlib.pyplot as plt
 
-import logging
+
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
 app = FastAPI()
 
-# Get Model from HF
-HF_REPO_ID = os.environ.get("HF_REPO_ID", "dmtschulz/anomaly-detection-model")
-HF_FILENAME = os.environ.get("HF_FILENAME", "autoencoder_mnist.pth")
-HF_REVISION = os.environ.get("HF_REVISION", "main")
-
+# --- S3 Настройки (ВМЕСТО HF) ---
+S3_BUCKET_NAME = os.environ.get("S3_BUCKET_NAME", "anomaly-mlops-mnist-data")
+MODEL_S3_KEY = "models/best_model.pth"
+LOCAL_MODEL_PATH = "/tmp/best_model.pth" # Временный путь для модели в контейнере
 
 # Device configuration
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
-# Load the model once
-try:
-    # Dynamically download the model
-    MODEL_PATH = hf_hub_download(
-        repo_id=HF_REPO_ID,
-        filename=HF_FILENAME,
-        revision=HF_REVISION,
-        cache_dir="/app/hf_cache"  # Cache in folder inside container
-    )
-    model = load_model(MODEL_PATH)
-    model.eval()
-    log.info(f"Model {HF_FILENAME} loaded from Hugging Face with revision {HF_REVISION}.")
-except Exception as e:
-    raise RuntimeError(f"Failed to load model from Hugging Face: {e}")
+model = None
+MODEL_LOADED_SUCCESSFULLY = False
+
+
+def load_model_from_s3():
+    """Скачивает best_model.pth из S3 и инициализирует модель."""
+    global model
+    global MODEL_LOADED_SUCCESSFULLY
+    
+    if not S3_BUCKET_NAME:
+        log.error("Переменная среды S3_BUCKET_NAME не установлена.")
+        return
+
+    log.info(f"Запуск загрузки модели из S3: s3://{S3_BUCKET_NAME}/{MODEL_S3_KEY}")
+    
+    try:
+        # Boto3 автоматически использует IAM Role, прикрепленную к EC2
+        s3 = boto3.client('s3')
+        
+        # Скачиваем модель во временный файл
+        s3.download_file(S3_BUCKET_NAME, MODEL_S3_KEY, LOCAL_MODEL_PATH)
+        log.info("Модель успешно скачана. Инициализация...")
+
+        # --- ЗАГРУЗКА МОДЕЛИ PYTORCH ---
+        # NOTE: model.load_state_dict требует, чтобы класс модели был определен
+        # Предполагаем, что load_model (из src.train) умеет инициализировать класс.
+        
+        # Загружаем state dict (используем map_location для совместимости CPU/GPU)
+        state_dict = torch.load(LOCAL_MODEL_PATH, map_location=torch.device(DEVICE))
+        
+        # Инициализируем модель и загружаем веса
+        model = load_model() # Предполагаем, что load_model создает пустой экземпляр
+        model.load_state_dict(state_dict)
+        model.to(DEVICE)
+        model.eval()
+        
+        log.info(f"Модель {MODEL_S3_KEY} успешно инициализирована.")
+        MODEL_LOADED_SUCCESSFULLY = True
+        
+    except Exception as e:
+        log.error(f"❌ КРИТИЧЕСКАЯ ОШИБКА ЗАГРУЗКИ МОДЕЛИ: {e}")
+        MODEL_LOADED_SUCCESSFULLY = False
+
+
+# Выполняем загрузку модели при старте приложения
+load_model_from_s3()
 
 # Transformations
 transform = T.Compose([
@@ -51,18 +85,23 @@ transform = T.Compose([
     T.ToTensor()
 ])
 
-
+# --- HEALTH CHECK ---
 @app.get("/health")
 def health_check():
-    # Check if model has been initialized
-    if model is None:
-        raise HTTPException(status_code=503, detail="Model service unavailable")
-    return {"status": "ok", "model_revision": HF_REVISION}
+    # Проверяем, удалось ли загрузить модель
+    if not MODEL_LOADED_SUCCESSFULLY:
+        raise HTTPException(status_code=503, detail="Model service unavailable: Failed to load best_model.pth from S3.")
+    return {"status": "ok", "model_source": "S3", "model_key": MODEL_S3_KEY}
 
-
+# --- PREDICT ENDPOINT ---
 @app.post("/predict", summary="Predict anomaly score from image")
 async def predict(file: UploadFile):
+    # Добавляем проверку, чтобы избежать сбоя, если модель не загружена
+    if not MODEL_LOADED_SUCCESSFULLY:
+        raise HTTPException(status_code=503, detail="Model service unavailable. Cannot perform inference.")
+        
     try:
+        # ... (Остальной код инференса остается без изменений) ...
         contents = await file.read()
         image = Image.open(io.BytesIO(contents)).convert("L")
         image = transform(image)
@@ -108,4 +147,5 @@ async def predict(file: UploadFile):
         })
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
+        log.error(f"Prediction error: {e}")
+        raise HTTPException(status_code=500, detail=f"Unexpected error during prediction: {str(e)}")

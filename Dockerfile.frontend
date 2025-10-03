@@ -1,15 +1,11 @@
-# Dockerfile.frontend
-
 FROM python:3.11-slim
 
 WORKDIR /app
 
 # Copy everything for frontend
 COPY requirements-frontend.txt .
-RUN pip install --no-cache-dir \
-    -r requirements-frontend.txt \
-    --extra-index-url https://download.pytorch.org/whl/cpu
-
+# Убираем ненужную ссылку на PyTorch, если Frontend его не использует
+RUN pip install --no-cache-dir -r requirements-frontend.txt
 
 # Copy the Streamlit script
 COPY frontend/app.py ./app.py
