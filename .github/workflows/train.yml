@@ -107,7 +107,8 @@ jobs:
           INSTANCE_ID=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=${{ env.EC2_INSTANCE_NAME }}" --query "Reservations[].Instances[].InstanceId" --output text)
           
           # Формируем команду Docker с аргументами
-          DOCKER_CMD="docker run --rm \
+          DOCKER_CMD="docker pull $IMAGE_PATH && \
+          docker run --rm \
           ghcr.io/${{ env.GHCR_USERNAME }}/${{ github.event.repository.name }}-trainer:latest \
           --s3-bucket ${{ env.S3_BUCKET_NAME }} \
           --epochs ${{ env.TRAINING_EPOCHS }}"
