@@ -19,6 +19,9 @@ jobs:
   # 1. СБОРКА И ПУБЛИКАЦИЯ ОБОИХ ОБРАЗОВ
   build_and_push_deployment:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read # Чтобы читать код
+      packages: write # Чтобы писать в GHCR (Container Registry)
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
