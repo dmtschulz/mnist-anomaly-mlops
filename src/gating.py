@@ -34,8 +34,8 @@ def compare_and_gate(s3_bucket: str):
         s3.download_file(s3_bucket, NEW_METRICS_KEY, temp_new_metrics_path)
         with open(temp_new_metrics_path, 'r') as f:
             new_metrics = json.load(f)
-        new_loss = new_metrics.get('loss')
-        if new_loss is None: raise ValueError("New metrics file is missing 'loss' key.")
+        new_loss = new_metrics.get('test_loss')
+        if new_loss is None: raise ValueError("New metrics file is missing 'test_loss' key.")
         print(f"Candidate NEW Loss: {new_loss:.4f}")
         
     except Exception as e:
