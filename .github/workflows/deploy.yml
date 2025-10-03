@@ -54,7 +54,7 @@ jobs:
   # 2. РАЗВЕРТЫВАНИЕ НА EC2 ЧЕРЕЗ SSM
   deploy_to_ec2:
     runs-on: ubuntu-latest
-    needs: [build_and_push_deployment] # Запускаем только после успешной сборки
+    #needs: [build_and_push_deployment] # Запускаем только после успешной сборки
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4 # Нужно для docker-compose.yml
