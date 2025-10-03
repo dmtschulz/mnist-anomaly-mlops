@@ -53,20 +53,9 @@ def load_model_from_s3():
         # Скачиваем модель во временный файл
         s3.download_file(S3_BUCKET_NAME, MODEL_S3_KEY, LOCAL_MODEL_PATH)
         log.info("Модель успешно скачана. Инициализация...")
-
-        # --- ЗАГРУЗКА МОДЕЛИ PYTORCH ---
-        # NOTE: model.load_state_dict требует, чтобы класс модели был определен
-        # Предполагаем, что load_model (из src.train) умеет инициализировать класс.
-        
-        # Загружаем state dict (используем map_location для совместимости CPU/GPU)
-        state_dict = torch.load(LOCAL_MODEL_PATH, map_location=torch.device(DEVICE))
         
         # Инициализируем модель и загружаем веса
         model = load_model(LOCAL_MODEL_PATH) # Предполагаем, что load_model создает пустой экземпляр
-        model.load_state_dict(state_dict)
-        model.to(DEVICE)
-        model.eval()
-        
         log.info(f"Модель {MODEL_S3_KEY} успешно инициализирована.")
         MODEL_LOADED_SUCCESSFULLY = True
         
@@ -75,9 +64,10 @@ def load_model_from_s3():
         MODEL_LOADED_SUCCESSFULLY = False
 
 
-# Выполняем загрузку модели при старте приложения
-load_model_from_s3()
-
+@app.on_event("startup")
+async def startup_event():
+    log.info("Запуск startup event: Инициализация модели.")
+    load_model_from_s3()
 # Transformations
 transform = T.Compose([
     T.Grayscale(num_output_channels=1),
