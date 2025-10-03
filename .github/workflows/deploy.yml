@@ -91,25 +91,22 @@ jobs:
           # Upload docker-compose.yml to S3
           aws s3 cp docker-compose.yml s3://$S3_BUCKET_NAME/deployment/docker-compose.yml --region $AWS_REGION
   
-          # Prepare SSM command
-          SSM_COMMAND=$(cat <<EOF
-          DEPLOY_DIR=/opt/mlops-deploy
-          sudo mkdir -p \$DEPLOY_DIR
-          cd \$DEPLOY_DIR
-          aws s3 cp s3://$S3_BUCKET_NAME/deployment/docker-compose.yml ./docker-compose.yml --region $AWS_REGION
-          export AWS_REGION=$AWS_REGION
-          export S3_BUCKET_NAME=$S3_BUCKET_NAME
-          echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
-          docker-compose pull
-          docker-compose up -d --remove-orphans
-          EOF
-          )
-  
           # Send command via SSM
           aws ssm send-command \
             --instance-ids "$INSTANCE_ID" \
             --document-name "AWS-RunShellScript" \
             --comment "MLOps Deployment" \
-            --parameters commands=["$SSM_COMMAND"] \
+            --parameters 'commands=[
+              "DEPLOY_DIR=/opt/mlops-deploy",
+              "sudo mkdir -p $DEPLOY_DIR",
+              "sudo chown -R ec2-user:ec2-user $DEPLOY_DIR",
+              "cd $DEPLOY_DIR",
+              "aws s3 cp s3://'"$S3_BUCKET_NAME"'/deployment/docker-compose.yml ./docker-compose.yml --region '"$AWS_REGION"'",
+              "export AWS_REGION='"$AWS_REGION"'",
+              "export S3_BUCKET_NAME='"$S3_BUCKET_NAME"'",
+              "echo '"$GH_TOKEN"' | docker login ghcr.io -u '"$GITHUB_ACTOR"' --password-stdin",
+              "docker compose pull",
+              "docker compose up -d --remove-orphans"
+            ]' \
             --output text \
             --region $AWS_REGION
