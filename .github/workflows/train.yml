@@ -71,7 +71,7 @@ jobs:
   
   train_and_publish:
     runs-on: ubuntu-latest
-    #needs: [build_and_push_trainer] # Ждем успешной сборки
+    needs: [build_and_push_trainer] # Ждем успешной сборки
     
     # Настраиваем переменные окружения AWS
     env:
@@ -96,9 +96,9 @@ jobs:
           # Запускаем инстанс
           aws ec2 start-instances --instance-ids "$INSTANCE_ID"
           
-          echo "Waiting for EC2 instance to be ready (up to 30s)..."
+          echo "Waiting for EC2 instance to be ready (up to 20s)..."
           # Даем инстансу время на запуск и подключение к SSM
-          sleep 30 
+          sleep 20 
 
       - name: Run Training via AWS SSM
         id: run_ssm_command
