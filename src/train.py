@@ -176,8 +176,8 @@ def save_model(model, path):
 
 
 # Load model (полезно для локального тестирования)
-def load_model(path, h=32):
-    model = Autoencoder(h)
+def load_model(path, h=32, n_wide=2048):
+    model = Autoencoder(h, n_wide)
     model.load_state_dict(torch.load(path, map_location=DEVICE))
     model.to(DEVICE)
     model.eval()

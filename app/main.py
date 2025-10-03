@@ -62,7 +62,7 @@ def load_model_from_s3():
         state_dict = torch.load(LOCAL_MODEL_PATH, map_location=torch.device(DEVICE))
         
         # Инициализируем модель и загружаем веса
-        model = load_model() # Предполагаем, что load_model создает пустой экземпляр
+        model = load_model(LOCAL_MODEL_PATH) # Предполагаем, что load_model создает пустой экземпляр
         model.load_state_dict(state_dict)
         model.to(DEVICE)
         model.eval()
