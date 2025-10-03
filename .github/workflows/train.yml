@@ -96,9 +96,9 @@ jobs:
           # Запускаем инстанс
           aws ec2 start-instances --instance-ids "$INSTANCE_ID"
           
-          echo "Waiting for EC2 instance to be ready (up to 60s)..."
+          echo "Waiting for EC2 instance to be ready (up to 30s)..."
           # Даем инстансу время на запуск и подключение к SSM
-          sleep 60 
+          sleep 30 
 
       - name: Run Training via AWS SSM
         id: run_ssm_command
