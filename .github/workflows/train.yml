@@ -125,9 +125,7 @@ jobs:
           COMMAND_ID=$(cat command_id.txt)
           echo "Sent SSM command: $COMMAND_ID. Waiting for execution..."
           
-          # Ждем завершения команды (макс. 20 минут)
-          # --delay 15 --max-attempts 80 = 20 минут
-          aws ssm wait command-executed --command-id $COMMAND_ID --instance-id $INSTANCE_ID --delay 15 --max-attempts 80
+          aws ssm wait command-executed --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID"
 
           echo "SSM command finished. Retrieving output..."
           # Получаем вывод команды (логи тренировки)
