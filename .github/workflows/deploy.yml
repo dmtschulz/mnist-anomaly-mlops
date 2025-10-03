@@ -50,80 +50,66 @@ jobs:
 # 2. РАЗВЕРТЫВАНИЕ НА EC2 ЧЕРЕЗ SSM
   deploy_to_ec2:
     runs-on: ubuntu-latest
-    #needs: [build_and_push_deployment]
-    
+  
     env:
       AWS_REGION: ${{ secrets.AWS_REGION }}
-      S3_BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }} # <-- Убедитесь, что этот секрет определен!
+      S3_BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}
       DEPLOYMENT_INSTANCE_NAME: MNIST-anomaly-MLOps-Deployment-Server
-      
+  
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-
+  
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
-          
+  
       - name: Get Deployment Instance ID
         id: get_id
         run: |
           INSTANCE_ID=$(aws ec2 describe-instances \
             --filters "Name=tag:Name,Values=${{ env.DEPLOYMENT_INSTANCE_NAME }}" \
             --query "Reservations[].Instances[].InstanceId" \
-            --output text)
+            --output text \
+            --region $AWS_REGION)
           echo "INSTANCE_ID=$INSTANCE_ID" >> $GITHUB_OUTPUT
-
+  
       - name: Deploy with Docker Compose via SSM
         env:
           INSTANCE_ID: ${{ steps.get_id.outputs.INSTANCE_ID }}
-          # GITHUB_TOKEN нужен для логина в GHCR
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
         run: |
           if [ -z "$INSTANCE_ID" ]; then
             echo "Deployment instance not found!"
             exit 1
           fi
-          
-          # --- 1. Копируем docker-compose.yml в S3 (Используем env.S3_BUCKET_NAME)
-          aws s3 cp docker-compose.yml s3://${{ env.S3_BUCKET_NAME }}/deployment/docker-compose.yml
-
-          SSM_COMMAND="
-          # 1. Настройка рабочей среды
+  
+          # Upload docker-compose.yml to S3
+          aws s3 cp docker-compose.yml s3://$S3_BUCKET_NAME/deployment/docker-compose.yml --region $AWS_REGION
+  
+          # Prepare SSM command
+          SSM_COMMAND=$(cat <<EOF
           DEPLOY_DIR=/opt/mlops-deploy
-          
-          # Создаем папку с root-правами
-          sudo mkdir -p $DEPLOY_DIR 
-          
-          # 🚨 Передаем права, но это уже может быть не нужно, если SSM user - ec2-user
-          # Если команда падает на 'cd $DEPLOY_DIR', добавьте обратно: sudo chown -R ec2-user:ec2-user $DEPLOY_DIR
-          
-          cd $DEPLOY_DIR # Теперь ec2-user может войти
-          
-          # 2. Скачивание docker-compose
-          aws s3 cp s3://${{ env.S3_BUCKET_NAME }}/deployment/docker-compose.yml ./docker-compose.yml
-          
-          # 3. ЭКСПОРТ ПЕРЕМЕННЫХ
-          export AWS_REGION=${{ env.AWS_REGION }}
-          export S3_BUCKET_NAME=${{ env.S3_BUCKET_NAME }}
-          
-          # 4. Аутентификация Docker в GHCR
-          # Используем docker login без sudo, так как мы - ec2-user
-          echo ${{ env.GH_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-          
-          # 5. Обновление образов и запуск
+          sudo mkdir -p \$DEPLOY_DIR
+          cd \$DEPLOY_DIR
+          aws s3 cp s3://$S3_BUCKET_NAME/deployment/docker-compose.yml ./docker-compose.yml --region $AWS_REGION
+          export AWS_REGION=$AWS_REGION
+          export S3_BUCKET_NAME=$S3_BUCKET_NAME
+          echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
           docker compose pull
           docker compose up -d --remove-orphans
-          "
-
-          # Отправка команды SSM
+          EOF
+          )
+  
+          # Send command via SSM
           aws ssm send-command \
             --instance-ids "$INSTANCE_ID" \
             --document-name "AWS-RunShellScript" \
             --comment "MLOps Deployment" \
-            --parameters commands="$SSM_COMMAND" \
-            --user "ec2-user" \ 
-            --output text
+            --parameters commands=["$SSM_COMMAND"] \
+            --output text \
+            --region $AWS_REGION
