@@ -4,7 +4,7 @@ services:
   # 1. BACKEND service (FastAPI)
   backend:
     image: ghcr.io/dmtschulz/mnist-anomaly-mlops-backend:latest
-    container_name: mnist-anomaly-mlops-backend
+    container_name: mlops-backend
     restart: always
     build:
       context: . 
@@ -15,7 +15,7 @@ services:
     # УДАЛЯЕМ HF_CACHE и HF_VARS
     # volumes:
     #   - ./.hf_cache_data:/app/hf_cache
-      
+    
     environment:
       # ПЕРЕДАЧА ИМЕНИ S3 БАКЕТА В КОНТЕЙНЕР
       - S3_BUCKET_NAME=anomaly-mlops-mnist-data # Ваше точное имя бакета
@@ -25,17 +25,17 @@ services:
   # 2. FRONTEND Service (Streamlit)
   frontend:
     image: ghcr.io/dmtschulz/mnist-anomaly-mlops-frontend:latest
-    container_name: mnist-anomaly-mlops-frontend
+    container_name: mlops-frontend
     restart: always
     build:
       context: .
       dockerfile: Dockerfile.frontend
     ports:
       - "8501:8501" 
-      
+    
     depends_on:
       - backend
-      
+    
     environment:
       # Streamlit обращается к Backend по имени сервиса (backend:5000)
       - API_HOST=backend
