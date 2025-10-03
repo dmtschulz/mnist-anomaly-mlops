@@ -50,7 +50,7 @@ jobs:
 # 2. РАЗВЕРТЫВАНИЕ НА EC2 ЧЕРЕЗ SSM
   deploy_to_ec2:
     runs-on: ubuntu-latest
-  
+    
     env:
       AWS_REGION: ${{ secrets.AWS_REGION }}
       S3_BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}
@@ -100,8 +100,8 @@ jobs:
           export AWS_REGION=$AWS_REGION
           export S3_BUCKET_NAME=$S3_BUCKET_NAME
           echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
-          docker compose pull
-          docker compose up -d --remove-orphans
+          docker-compose pull
+          docker-compose up -d --remove-orphans
           EOF
           )
   
